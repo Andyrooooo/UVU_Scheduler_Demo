@@ -7,21 +7,9 @@ const csvFilePath = './src/data/202310-Spring-DGM-Schedule-MyEdit.csv';
 const jsonFilePath = './src/data/springDGMSchedule.json';
 const  eventListPath = './src/data/FullEventList.json';
 
-/* type DataItem = Record<string, any> */
-
-/* const jsonArray: any = []; */
+// const jsonArray: any = [];
 type MyData = Record<string, any>
 const jsonArray: MyData[] = []
-
-async function main() {
-	//await convertCSV2JSON();
-	const cleanedUpJson = await cleanUpJSON();
-	const fullEventList = produceEventList(cleanedUpJson);
-	// now write the cleaned up json to a file
-	writeFile(eventListPath, JSON.stringify(fullEventList));
-}
-
-main();
 
 async function convertCSV2JSON() {
 	const readStream = fs.createReadStream(csvFilePath);
@@ -32,31 +20,45 @@ async function convertCSV2JSON() {
 			writeJSON();
 		});
 }
-
+convertCSV2JSON()
 
 async function writeJSON() {
-	// const modifiedArray: DataItem[] = jsonArray.map((item, index) => {
-    //     const modifiedObject: DataItem = {}
-    //     for (const key in item) {
-    //         modifiedObject[`_${index + 1}`] = item[key]
-    //     }
-    //     return modifiedObject
-    // })
 
 	const modifiedArray: MyData[] = jsonArray.map((item) => {
 		const modifiedObject: MyData = {}
+		let counter = 1
 		for (const key in item) {
 		  // Replace spaces and newline characters with underscores
-		  const modifiedKey = key.replace(/[\s\n]+/g, '_')
-		  modifiedObject[modifiedKey] = item[key]
+		//   const modifiedKey = key.replace(/[\s\n]+/g, '_')
+		modifiedObject[`_` + counter] = item[key]
+		counter++
 		}
 		return modifiedObject
-	  })
+	})
+
+	// Filter out objects with all empty property values
+	const filteredArray = modifiedArray.filter((item) => {
+		for (const key in item) {
+			if (item[key] !== '') {
+				return true
+			}
+		}
+		return false
+	})
 
 	const writeStream = fs.createWriteStream(jsonFilePath)
-	writeStream.write(JSON.stringify(modifiedArray, null, 4))
+	writeStream.write(JSON.stringify(filteredArray, null, 4))
 	writeStream.end(() => console.log('JSON file written.'))
 }
+
+async function main() {
+	//await convertCSV2JSON();
+	const cleanedUpJson = await cleanUpJSON();
+	const fullEventList = produceEventList(cleanedUpJson);
+	// now write the cleaned up json to a file
+	writeFile(eventListPath, JSON.stringify(fullEventList));
+}
+main();
 
 async function cleanUpJSON() {
 	const data: any[] = JSON.parse(fs.readFileSync(jsonFilePath, 'utf8'));
@@ -65,7 +67,7 @@ async function cleanUpJSON() {
 
 	const cleanedData = data
 		.map((item, index) => {
-			if (index > 1) {
+			if (index > -1) {
 				const keys: string[] = Object.keys(item);
 				const values: string[] = Object.values(item);
 				// if the object has just one key and value, then it is a course name
@@ -78,14 +80,14 @@ async function cleanUpJSON() {
 				
 				const newCourse = {
 					id: itemID,
-					courseID: item._CLSS_ID,
+					courseID: item._1,
 					course_name: currentCourseName,
-					course: item.Course,
-					instructor: item.Instructor,
-					section: replaceSpaceNParens(item.Section),
-					course_title: item.Course_Title,
-					meeting_pattern: item.Meeting_Pattern,
-					building_room: item.Building_and_Room.slice(0, 6), // only take the first 6 characters
+					course: item._8,
+					instructor: item._16,
+					section: replaceSpaceNParens(item._9),
+					course_title: item._10,
+					meeting_pattern: item._14,
+					building_room: item._17.slice(0, 6), // only take the first 6 characters
 				};
 				return newCourse;
 			}
@@ -100,6 +102,7 @@ function replaceSpaceNParens(str: string) {
 	str = str.replace(/\([^)]*\)/g, ''); // remove all contents between parens
 	return str;
 }
+
 
 
 function produceEventList(data: any[]) {
@@ -167,59 +170,49 @@ function produceEventList(data: any[]) {
 
 function convertTime(time: string) {
 	const [days, startEndTimes] = time.split(' ');
-  
-	if (!startEndTimes) {
-	  // Handle the case where startEndTimes is missing or empty
-	  return { start: '', end: '' };
+	let isoDate;
+
+	switch (days) {
+		case 'M':
+			isoDate = '2024-01-08'; // Monday
+			break;
+		case 'W':
+			isoDate = '2024-01-10'; // Wednesday
+			break;
+		case 'MW':
+			isoDate = '2024-01-08,2024-01-10'; // Monday and Wednesday
+			break;
+		case 'T':
+			isoDate = '2024-01-09'; // Tuesday
+			break;
+		case 'TR':
+			isoDate = '2024-01-09,2024-01-11'; // Tuesday and Thursday
+			break;
+		case 'R':
+			isoDate = '2024-01-11'; // Thursday
+			break;
+		case 'F':
+			isoDate = '2024-01-12'; // Friday
+			break;
+		case 'MTWR':
+			isoDate = '2024-01-08,2024-01-09,2024-01-10,2024-01-11'; // Monday, Tuesday, Wednesday, Thursday
+			break;
+		case 'MWF':
+			isoDate = '2024-01-08,2024-01-09,2024-01-10'; // Monday, Tuesday, Wednesday
+			break;
+		default:
+			isoDate = 'Invalid day'; // Invalid input
 	}
-  
-	const isoDate = getIsoDateForDays(days);
-  
-	if (!isoDate) {
-	  // Handle the case where days are not recognized
-	  return { start: '', end: '' };
-	}
-  
+
 	const timeArray = startEndTimes.split('-');
-  
-	if (timeArray.length !== 2) {
-	  // Handle the case where startEndTimes does not have a valid format
-	  return { start: '', end: '' };
-	}
-  
 	let startTime = convertHours(timeArray[0]);
 	const start = `${isoDate}T${format(parse(startTime, 'h:mma', new Date()), 'HH:mm:ss')}`;
-  
+
 	let endTime = convertHours(timeArray[1]);
 	const end = `${isoDate}T${format(parse(endTime, 'h:mma', new Date()), 'HH:mm:ss')}`;
-  
+
 	return { start, end };
-  }
-  
-  function getIsoDateForDays(days: string) {
-	switch (days) {
-	  case 'M':
-		return '2024-01-08'; // Monday
-	  case 'W':
-		return '2024-01-10'; // Wednesday
-	  case 'MW':
-		return '2024-01-08,2024-01-10'; // Monday and Wednesday
-	  case 'T':
-		return '2024-01-09'; // Tuesday
-	  case 'TR':
-		return '2024-01-09,2024-01-11'; // Tuesday and Thursday
-	  case 'R':
-		return '2024-01-11'; // Thursday
-	  case 'F':
-		return '2024-01-12'; // Friday
-	  case 'MTWR':
-		return '2024-01-08,2024-01-09,2024-01-10,2024-01-11'; // Monday, Tuesday, Wednesday, Thursday
-	  case 'MWF':
-		return '2024-01-08,2024-01-09,2024-01-10'; // Monday, Tuesday, Wednesday
-	  default:
-		return null; // Invalid input
-	}
-  }
+}
 
 function convertHours(timeStr: string) {
 	timeStr = timeStr.toLowerCase().replace(/;$/, '');
@@ -231,6 +224,7 @@ function convertHours(timeStr: string) {
 	}
 	return timeStr;
 }
+
 
 
 

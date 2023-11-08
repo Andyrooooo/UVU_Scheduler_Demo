@@ -1,101 +1,102 @@
 import * as fs from 'fs';
 import csvParser from 'csv-parser';
-/* import { writeFile } from 'fs/promises'; */
+import { writeFile } from 'fs/promises';
 import { format, parse } from 'date-fns';
 
 const csvFilePath = './src/data/202310-Spring-DGM-Schedule-MyEdit.csv';
-const jsonFilePath = './src/data/springDGMSchedule.json';
-/* const  eventListPath = './src/data/FullEventList.json'; */
+const eventListPath = './src/data/FullEventList.json';
 
-/* type DataItem = Record<string, any> */
-
-/* const jsonArray: any = []; */
-type MyData = Record<string, any>
-const jsonArray: MyData[] = []
-
-/* async function main() {
-	//await convertCSV2JSON();
-	const cleanedUpJson = await cleanUpJSON();
-	const fullEventList = produceEventList(cleanedUpJson);
-	// now write the cleaned up json to a file
-	writeFile(eventListPath, JSON.stringify(fullEventList));
-}
-
-main(); */
+type MyData = Record<string, any>;
+const jsonArray: MyData[] = [];
+const csvData: MyData[] = [];
 
 async function convertCSV2JSON() {
-	const readStream = fs.createReadStream(csvFilePath);
-	readStream
-		.pipe(csvParser())
-		.on('data', (data) => jsonArray.push(data))
-		.on('end', () => {
-			writeJSON();
-		});
+  const readStream = fs.createReadStream(csvFilePath);
+
+  await new Promise<void>((resolve, reject) => {
+    readStream
+      .pipe(csvParser())
+      .on('data', (data) => jsonArray.push(data))
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (error) => {
+        reject(error);
+      });
+  });
 }
-convertCSV2JSON()
 
 async function writeJSON() {
-	// const modifiedArray: DataItem[] = jsonArray.map((item, index) => {
-    //     const modifiedObject: DataItem = {}
-    //     for (const key in item) {
-    //         modifiedObject[`_${index + 1}`] = item[key]
-    //     }
-    //     return modifiedObject
-    // })
+  const modifiedArray: MyData[] = jsonArray.map((item) => {
+    const modifiedObject: MyData = {};
+    let counter = 1;
+    for (const key in item) {
+      modifiedObject[`_` + counter] = item[key];
+      counter++;
+    }
+    return modifiedObject;
+  });
 
-	const modifiedArray: MyData[] = jsonArray.map((item) => {
-		const modifiedObject: MyData = {}
-		let counter = 1
-		for (const key in item) {
-		  // Replace spaces and newline characters with underscores
-		//   const modifiedKey = key.replace(/[\s\n]+/g, '_')
-		modifiedObject[`_` + counter] = item[key]
-		counter++
-		}
-		return modifiedObject
-	  })
+  // Filter out objects with all empty property values
+  const filteredArray = modifiedArray.filter((item) => {
+    for (const key in item) {
+      if (item[key] !== '') {
+        return true;
+      }
+    }
+    return false;
+  });
 
-	const writeStream = fs.createWriteStream(jsonFilePath)
-	writeStream.write(JSON.stringify(modifiedArray, null, 4))
-	writeStream.end(() => console.log('JSON file written.'))
+  csvData.push(...filteredArray);
 }
 
-/* async function cleanUpJSON() {
-	const data: any[] = JSON.parse(fs.readFileSync(jsonFilePath, 'utf8'));
+async function main() {
+  await convertCSV2JSON();
+  await writeJSON();
 
-	let currentCourseName = '';
+  const cleanedUpJson = cleanUpJSON();
+  const fullEventList = produceEventList(cleanedUpJson);
 
-	const cleanedData = data
-		.map((item, index) => {
-			if (index > 1) {
-				const keys: string[] = Object.keys(item);
-				const values: string[] = Object.values(item);
-				// if the object has just one key and value, then it is a course name
-				if (keys.length === 1 && values.length === 1) {
-					currentCourseName = values[0];
-					return;
-				}
-				
-				const itemID = index 
-				
-				const newCourse = {
-					id: itemID,
-					courseID: item._1,
-					course_name: currentCourseName,
-					course: item._8,
-					instructor: item._16,
-					section: replaceSpaceNParens(item._9),
-					course_title: item._10,
-					meeting_pattern: item._14,
-					building_room: item._17.slice(0, 6), // only take the first 6 characters
-				};
-				return newCourse;
-			}
-		})
-		.filter((item) => item !== undefined);
-	//console.log(cleanedData);
-	return cleanedData;
+  await writeFile(eventListPath, JSON.stringify(fullEventList));
 }
+
+function cleanUpJSON() {
+  let currentCourseName = '';
+
+  const cleanedData = csvData
+    .map((item, index) => {
+      if (index > -1) {
+        const keys: string[] = Object.keys(item);
+        const values: string[] = Object.values(item);
+        if (keys.length === 1 && values.length === 1) {
+          currentCourseName = values[0];
+          return;
+        }
+
+        const itemID = index;
+
+        const newCourse = {
+          id: itemID,
+          courseID: item._1,
+          course_name: currentCourseName,
+          course: item._8,
+          instructor: item._16,
+          section: replaceSpaceNParens(item._9),
+          course_title: item._10,
+          meeting_pattern: item._14,
+          building_room: item._17.slice(0, 6),
+        };
+        return newCourse;
+      }
+    })
+    .filter((item) => item !== undefined);
+
+  return cleanedData;
+}
+
+main().then(() => {
+	console.log('Processing completed.');
+});
 
 function replaceSpaceNParens(str: string) {
 	str = str.replace(/\s/g, ''); // remove all spaces
@@ -223,7 +224,8 @@ function convertHours(timeStr: string) {
 		}
 	}
 	return timeStr;
-} */
+}
+
 
 
 
