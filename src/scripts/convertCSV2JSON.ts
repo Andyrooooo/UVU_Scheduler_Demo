@@ -1,3 +1,5 @@
+// NEED TO FIX CSV FILE AND REMOVE NOT NEEDED INFO ON INSTRUCTOR CELLS
+
 import * as fs from 'fs';
 import csvParser from 'csv-parser';
 import { writeFile } from 'fs/promises';

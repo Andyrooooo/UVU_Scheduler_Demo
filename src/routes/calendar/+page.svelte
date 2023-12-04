@@ -3,29 +3,36 @@
 	import ResourceTimeGrid from '@event-calendar/resource-time-grid'
 	import TimeGrid from '@event-calendar/time-grid'
 	import fullEventList from '../../data/FullEventList.json'
- 	import { onMount, beforeUpdate } from 'svelte'
+ 	// import { beforeUpdate } from 'svelte'
 	import Filter from '../filter/+page.svelte'
-	import Import from '../import/+page.svelte'
 
 	let eventList: any[] = []
 
-	beforeUpdate(() => {
-		let tempEventList = fullEventList.filter(
-			(item: any) => item?.extendedProps?.building_room === 'CS 509'
-		)
+	// beforeUpdate(() => {
+	// 	// let tempEventList = fullEventList.filter(
+	// 	// 	(item: any) => item?.extendedProps?.building_room === 'CS 509'
+	// 	// )
 
-		tempEventList.forEach((item: any) => {
-			let tempEvent = {
-				id: item.id,
-				title: item.title,
-				start: item.start,
-				end: item.end
-                //We might add eventBackgroundColor: soon
-			}
-			eventList.push(tempEvent)
-		})
-		console.log(eventList)
-	})
+	// 	// tempEventList.forEach((item: any) => {
+	// 	// 	let tempEvent = {
+	// 	// 		id: item.id,
+	// 	// 		title: item.title,
+	// 	// 		start: item.start,
+	// 	// 		end: item.end
+    //     //         //We might add eventBackgroundColor: soon
+	// 	// 	}
+	// 	// 	eventList.push(tempEvent)
+	// 	// })
+
+	// 	let tempEventList = {
+	// 		id: "1",
+	// 		title: "Welcome to the UVU Scheduler, please add data to the calendar to get started!",
+	// 		start: "2024-01-08T16:30:00", 
+	// 		end:"2024-01-08T17:45:00",
+	// 	}
+	// 	eventList = [...eventList, tempEventList]
+	// 	console.log(eventList)
+	// })
 
 	// events: [
 	// 		{ 
@@ -108,7 +115,6 @@
 <div class="md:flex md:justify-between">
 	<div class="md:basis-4/12">
 		<h1 class="font-bold text-2xl mb-10 mt-4 text-center">Academic Scheduling Aid</h1>
-		<Import/>
 		<Filter 
 		on:filterRoom={filterTheRoom} 
 		on:filterProfessor={filterTheProfessor} 
