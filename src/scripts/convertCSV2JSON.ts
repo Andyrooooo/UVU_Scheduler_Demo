@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import csvParser from 'csv-parser';
 import { writeFile } from 'fs/promises';
 import { format, parse } from 'date-fns';
-import type { Readable } from 'stream';
+import { Readable } from 'stream';
+
 
 // const csvFilePath = './src/data/202310-Spring-DGM-Schedule-MyEdit.csv';
 const eventListPath = './src/data/FullEventList.json';
@@ -11,9 +12,14 @@ type MyData = Record<string, any>;
 const jsonArray: MyData[] = [];
 const csvData: MyData[] = [];
 
-export async function convertCSV2JSON(readStream: Readable): Promise<void> {
+let globalFileContents: Buffer | null = null
+
+export async function convertCSV2JSON(fileContents: Buffer): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
+	const readStream = new Readable();
+	readStream.push(fileContents);
+	readStream.push(null);
     readStream
       .pipe(csvParser())
       .on('data', (data) => jsonArray.push(data))
@@ -24,6 +30,8 @@ export async function convertCSV2JSON(readStream: Readable): Promise<void> {
         reject(error);
       });
   });
+
+  globalFileContents = fileContents
 }
 
 async function writeJSON() {
@@ -50,17 +58,27 @@ async function writeJSON() {
   csvData.push(...filteredArray);
 }
 
-async function main(readStream: Readable) {
-  await convertCSV2JSON(readStream);
-  await writeJSON();
-
-  const cleanedUpJson = cleanUpJSON();
-  const fullEventList = produceEventList(cleanedUpJson);
-
-  await writeFile(eventListPath, JSON.stringify(fullEventList));
-
+export async function processFile(fileContents?: Buffer): Promise<void> {
+	const actualFileContents = fileContents || globalFileContents;
   
+	if (actualFileContents) {
+		await convertCSV2JSON(actualFileContents);
+		await writeJSON();
+	  
+		const cleanedUpJson = cleanUpJSON();
+		const fullEventList = produceEventList(cleanedUpJson);
+	  
+		await writeFile(eventListPath, JSON.stringify(fullEventList));
+	} else {
+		console.log('No file contents provided.');
+	}
 }
+
+export async function simulateMain(): Promise<void> {
+	process.env.MAIN = 'true'
+	await processFile()
+}
+
 
 function cleanUpJSON() {
   let currentCourseName = '';
@@ -96,9 +114,8 @@ function cleanUpJSON() {
   return cleanedData;
 }
 
-main(readStream: Readable).then(() => {
-	console.log('Processing completed.');
-});
+
+
 
 function replaceSpaceNParens(str: string) {
 	str = str.replace(/\s/g, ''); // remove all spaces

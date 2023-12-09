@@ -1,6 +1,6 @@
 import express from 'express'
 
-// import { convertCSV2JSON } from '../src/scripts/convertCSV2JSON.ts'
+import { convertCSV2JSON, simulateMain } from '../src/scripts/convertCSV2JSON.ts'
 
 import bodyParser from 'body-parser'
 const app = express()
@@ -14,30 +14,25 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 const storage = multer.memoryStorage()
 const upload = multer({ storage: storage})
+let fileContents
 
 app.get('/', async (req, res) => {
     console.log("hello")
     res.send("I am working") 
 })
 
-// app.post('/convert', upload.single('file'), async (req, res) => {
-//     const uploadedFile = req.file
+app.post('/convert', upload.single('file'), async (req, res) => {
+    const uploadedFile = req.file
     
-//     if (uploadedFile) {
-//         try {
-//             const fileContents = uploadedFile.buffer.toString()
-//             await convertCSV2JSON(fileContents)
-//             console.log("recieved file:", uploadedFile.originalname) 
-//             res.status(200).send("file recieved")
-//         } catch (error) {
-//             console.log(error)
-//             res.status(500).send("conversion failed")
-//         }
-//     }
-//     else {
-//         res.status(400).json({ error: 'No file provided.' }) 
-//     }
-// })
+    
+    if (uploadedFile) {
+        fileContents = uploadedFile.buffer
+        await convertCSV2JSON(fileContents)
+        await simulateMain()
+    }
+    
+   console.log("processing done")
+})
 
 app.listen(port, () => {
     console.log(`server is listening at http://localhost:${port}`)

@@ -26,36 +26,36 @@
         emptyFile = false
         existingfile = true
         // console.log('selected file:', selectedFile)
-        /* selectedFile = {...selectedFile} */
-
+        // selectedFile = {...selectedFile}
        
     }
 
         
     async function insertFileToFilters() {
-        // if (selectedFile.name.toLowerCase().endsWith('.csv')  || 
-        //     selectedFile.name.toLowerCase().endsWith('.xlsx')) {
-        //     const formData = new FormData()
-        //     formData.append('file', selectedFile)
+        if (selectedFile.name.toLowerCase().endsWith('.csv')  || 
+            selectedFile.name.toLowerCase().endsWith('.xlsx')) {
+            const formData = new FormData()
+            formData.append('file', selectedFile)
 
-        //     fetch('http://localhost:5174/convert', {
-        //         method: 'POST',
-        //         body: formData
-        //     })
-        //     .then(() => {
-        //         emptyFile = true
-        //         selectedFile = {}
-        //     })
-        //     console.log(selectedFile)
+            fetch('http://localhost:5174/convert', {
+                method: 'POST',
+                body: formData
+            })
             
-        // } else {
-        //     console.error('Invalid file format. Please select a CSV file.');
-        // }
+            console.log(selectedFile)
+            
+        } else {
+            console.error('Invalid file format. Please select a CSV file.');
+        }
 
-        const res = await fetch('http://localhost:5174');
-        const data = await res.text();
-        console.log(data);
+        // const res = await fetch('http://localhost:5174');
+        // const data = await res.text();
+        // console.log(data);
         
+        emptyFile = true
+        selectedFile = {}
+
+        dispatch('closeCSVModal')
     }
     
 </script>
